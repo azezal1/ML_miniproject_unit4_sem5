@@ -1,0 +1,863 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cricket Form Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Work+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a stadium scoreboard band carries the verdict; below it, a match-analysis notebook — innings chart, model, Viterbi trellis, forward–backward, forecast, theory, viva. */
+:root {
+  --paper: #edf1ea;
+  --surface: #ffffff;
+  --ink: #132231;
+  --muted: #55626e;
+  --line: #d3dbd0;
+  --accent: #0f5c8f;
+  --accent-ink: #ffffff;
+  --accent-soft: #e1ecf4;
+  --s-in: #1d7a48;
+  --s-avg: #c4860e;
+  --s-out: #b52a2f;
+  --board: #0f2233;
+  --board-ink: #f1f5f8;
+  --board-muted: #93a7b8;
+  --board-line: #24394c;
+  --display: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Work Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "DM Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d1419; --surface: #141d24; --ink: #e5ebef; --muted: #96a3ae; --line: #25313b;
+    --accent: #6eaee0; --accent-ink: #0b1a26; --accent-soft: #15283a;
+    --s-in: #3fb67a; --s-avg: #e2aa3c; --s-out: #e5605f;
+    --board: #08121b; --board-ink: #eef3f7; --board-muted: #8ea2b3; --board-line: #1b2d3c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d1419; --surface: #141d24; --ink: #e5ebef; --muted: #96a3ae; --line: #25313b;
+  --accent: #6eaee0; --accent-ink: #0b1a26; --accent-soft: #15283a;
+  --s-in: #3fb67a; --s-avg: #e2aa3c; --s-out: #e5605f;
+  --board: #08121b; --board-ink: #eef3f7; --board-muted: #8ea2b3; --board-line: #1b2d3c;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); margin: 0; line-height: 1.02; text-wrap: balance; }
+h2 { font-size: clamp(30px, 4.4vw, 42px); font-weight: 800; text-transform: uppercase; letter-spacing: 0.01em; }
+h3 { font-size: 22px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+
+/* Masthead */
+.mast { padding-block: 34px 26px; display: grid; gap: 14px; }
+.mast h1 { font-size: clamp(64px, 12vw, 148px); font-weight: 800; text-transform: uppercase; letter-spacing: -0.005em; line-height: 0.86; }
+.mast h1 span { color: var(--accent); }
+.mast .lede { max-width: 60ch; font-size: 18px; color: var(--muted); }
+
+/* Scoreboard */
+.board { background: var(--board); color: var(--board-ink); border-block: 4px solid var(--board-line); }
+.board .wrap { padding-block: 18px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; }
+.cell { padding: 6px 16px; border-left: 1px solid var(--board-line); display: grid; gap: 2px; min-width: 0; }
+.cell:first-child { border-left: 0; padding-left: 0; }
+.cell .k { font-family: var(--mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--board-muted); }
+.cell .v { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 4.6vw, 54px); line-height: 1; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.cell .v.word { font-size: clamp(24px, 2.6vw, 34px); text-transform: uppercase; white-space: normal; line-height: 1.05; }
+.cell .s { font-family: var(--mono); font-size: 12.5px; color: var(--board-muted); }
+.lamp { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px rgba(255,255,255,0.08), 0 0 14px currentColor; background: currentColor; }
+
+main.wrap { display: grid; gap: 64px; padding-block: 40px 64px; }
+section { display: grid; gap: 18px; scroll-margin-top: 16px; }
+.head { display: grid; gap: 8px; max-width: 70ch; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; min-width: 0; }
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+svg { display: block; overflow: visible; }
+svg text { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+svg .t-ink { fill: var(--ink); }
+svg .t-title { font-family: var(--body); font-size: 12px; fill: var(--ink); }
+svg .grid { stroke: var(--line); stroke-width: 1; }
+
+/* Innings controls */
+.innings { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+.controls { display: grid; gap: 16px; }
+.label { font-family: var(--mono); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.field { display: grid; gap: 6px; }
+textarea { width: 100%; min-height: 84px; resize: vertical; font: 15px/1.5 var(--mono); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+.err { font-size: 13.5px; color: var(--s-out); min-height: 1.2em; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 13.5px var(--body); padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.seg { display: inline-grid; grid-auto-flow: column; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: 500 14px var(--body); padding: 8px 14px; border: 0; background: var(--paper); color: var(--ink); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.btn { font: 600 14.5px var(--body); padding: 10px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+button:focus-visible, textarea:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; flex: none; }
+.verdict { font-size: 17px; max-width: 70ch; }
+.verdict b { font-weight: 600; }
+
+/* Model */
+.model { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.stack { display: grid; gap: 18px; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; }
+td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+.pin { width: 66px; font: 14px var(--mono); padding: 5px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); text-align: right; }
+.sname { display: inline-flex; align-items: center; gap: 7px; font-weight: 500; }
+.note { font-size: 14px; color: var(--muted); }
+.learnbox { display: grid; gap: 10px; }
+.status { font-family: var(--mono); font-size: 13px; padding: 8px 10px; border-radius: 6px; background: var(--accent-soft); color: var(--ink); min-height: 2.4em; }
+
+/* Trellis */
+.tctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.explain { font-family: var(--mono); font-size: 13.5px; line-height: 1.7; padding: 12px 14px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Posterior & forecast */
+.two { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.tbox { max-height: 360px; overflow: auto; }
+.forecast { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.fc { display: grid; gap: 6px; padding: 14px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); }
+.fc .big { font-family: var(--display); font-weight: 800; font-size: 52px; line-height: 1; font-variant-numeric: tabular-nums; }
+.meter { height: 8px; border-radius: 4px; background: var(--paper); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); }
+.formula { font-family: var(--mono); font-size: 14px; padding: 10px 12px; border-radius: 6px; background: var(--paper); overflow-x: auto; white-space: nowrap; }
+
+/* Theory */
+.problems { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.prob { display: grid; gap: 10px; align-content: start; }
+.prob .q { font-size: 15px; color: var(--muted); }
+.tag { font-family: var(--mono); font-size: 11px; padding: 2px 7px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); justify-self: start; }
+.cov td:first-child { font-family: var(--mono); color: var(--muted); }
+.cov td { white-space: normal; }
+
+/* Viva */
+.viva { display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0 16px; }
+summary { cursor: pointer; padding: 13px 0; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; font-family: var(--mono); color: var(--accent); }
+details[open] summary::after { content: "−"; }
+details p { padding: 0 0 14px; max-width: 75ch; color: var(--muted); }
+
+pre { margin: 0; font: 13.5px/1.6 var(--mono); padding: 16px; border-radius: 10px; background: var(--board); color: var(--board-ink); overflow-x: auto; }
+footer { border-top: 1px solid var(--line); padding-block: 18px 32px; font-size: 13.5px; color: var(--muted); }
+
+@media (max-width: 900px) {
+  .innings, .model, .two, .problems { grid-template-columns: minmax(0, 1fr); }
+  .board .wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+  .cell, .cell:first-child { border-left: 0; padding-left: 0; }
+  .cell:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 520px) {
+  .forecast { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+
+<header class="wrap mast">
+  <span class="eyebrow">ML Mini Project · Unit 4 · Hidden Markov Models</span>
+  <h1>Form <span>Guide</span></h1>
+  <p class="lede">A batter's form can't be measured directly, but it shows up in the scorecard. This Hidden Markov Model reads a sequence of innings and works out when the batter was in form, when they lost it, and what is likely to happen next.</p>
+</header>
+
+<div class="board" aria-live="polite">
+  <div class="wrap">
+    <div class="cell"><span class="k">Innings</span><span class="v" id="b-n">–</span><span class="s" id="b-hs">–</span></div>
+    <div class="cell"><span class="k">Average</span><span class="v" id="b-avg">–</span><span class="s">runs per innings</span></div>
+    <div class="cell"><span class="k">Current form</span><span class="v word" id="b-form">–</span><span class="s" id="b-formp">–</span></div>
+    <div class="cell"><span class="k">Next innings 50+</span><span class="v" id="b-fifty">–</span><span class="s">model forecast</span></div>
+    <div class="cell"><span class="k">Form changes</span><span class="v" id="b-chg">–</span><span class="s" id="b-chgs">in the Viterbi path</span></div>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <section id="innings" aria-labelledby="h-inn">
+    <div class="head">
+      <span class="eyebrow">The data</span>
+      <h2 id="h-inn">The scorecard</h2>
+      <p class="muted">Each bar is one innings, coloured by the form the model decided on. The strip underneath is the Viterbi path, the single most likely sequence of hidden form.</p>
+    </div>
+    <div class="innings">
+      <div class="card" style="display:grid;gap:14px">
+        <div class="scroll"><svg id="hero" role="img" aria-label="Runs per innings coloured by predicted form"></svg></div>
+        <div class="legend" id="legend"></div>
+        <p class="verdict" id="verdict"></p>
+      </div>
+      <div class="card controls">
+        <div class="field">
+          <span class="label">Example batters</span>
+          <div class="chips" id="presets"></div>
+        </div>
+        <div class="field">
+          <label class="label" for="runs">Runs per innings, oldest first</label>
+          <textarea id="runs" spellcheck="false"></textarea>
+          <span class="err" id="err"></span>
+          <span class="note">To use a real player, paste their recent scores from their ESPNcricinfo batting log. A * for not out is ignored.</span>
+        </div>
+        <div class="field">
+          <span class="label">Hidden states</span>
+          <div class="seg" role="group" aria-label="Number of hidden states">
+            <button id="st2" aria-pressed="true">2 · In / Out</button>
+            <button id="st3" aria-pressed="false">3 · In / Avg / Out</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Test the model</span>
+          <button class="btn ghost" id="sim">Simulate 20 innings with known form</button>
+          <span class="note">Generates a season from the model itself, so you can check how much of the true hidden form Viterbi recovers.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="model" aria-labelledby="h-model">
+    <div class="head">
+      <span class="eyebrow">λ = (A, B, π)</span>
+      <h2 id="h-model">The model</h2>
+      <p class="muted">Runs are grouped into three observations: <b>Low</b> (0–19), <b>Medium</b> (20–49) and <b>High</b> (50+). Edit any probability and every result on the page updates. Rows are rescaled to add up to 1 automatically.</p>
+    </div>
+    <div class="model">
+      <div class="stack">
+        <div class="card">
+          <h3>State diagram</h3>
+          <p class="note">Arrow thickness is the transition probability. Form tends to stick, so the self-loops are the thickest.</p>
+          <div class="scroll"><svg id="diagram" viewBox="0 0 560 330" style="width:100%;min-width:440px" role="img" aria-label="State transition diagram"></svg></div>
+        </div>
+        <div class="card">
+          <h3>What each form looks like</h3>
+          <p class="note">Emission probabilities: how likely each kind of score is in each hidden state.</p>
+          <div class="scroll"><svg id="emis" viewBox="0 0 520 190" style="width:100%;min-width:420px" role="img" aria-label="Emission probabilities"></svg></div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card scroll"><h3>Start π and transitions A</h3><table id="tA"></table></div>
+        <div class="card scroll"><h3>Emissions B</h3><table id="tB"></table></div>
+        <div class="card learnbox">
+          <h3>Learn from the data</h3>
+          <p class="note">Baum–Welch is the EM algorithm for HMMs. It re-estimates A, B and π to maximise the likelihood of these innings. Each iteration can only raise the log-likelihood.</p>
+          <div class="btn-row"><button class="btn" id="learn">Run Baum–Welch</button><button class="btn ghost" id="reset">Reset to defaults</button></div>
+          <div class="status" id="lstatus">Using the hand-set default parameters.</div>
+          <svg id="llc" viewBox="0 0 360 150" style="width:100%" role="img" aria-label="Log-likelihood by iteration"></svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="viterbi" aria-labelledby="h-vit">
+    <div class="head">
+      <span class="eyebrow">Decoding</span>
+      <h2 id="h-vit">Viterbi, step by step</h2>
+      <p class="muted">Each cell holds δ, the probability of the best path that ends in that state at that innings. Arrows point back to the best previous state. After the last innings, the algorithm backtracks along the arrows from the best final cell.</p>
+    </div>
+    <div class="card" style="display:grid;gap:14px">
+      <div class="tctl">
+        <button class="btn ghost" id="v-reset">Start over</button>
+        <button class="btn ghost" id="v-step">Next step</button>
+        <button class="btn" id="v-play">Play</button>
+        <button class="btn ghost" id="v-all">Show finished</button>
+        <span class="mono small muted" id="v-pos"></span>
+      </div>
+      <div class="scroll"><svg id="trellis" role="img" aria-label="Viterbi trellis"></svg></div>
+      <div class="explain" id="v-exp"></div>
+    </div>
+  </section>
+
+  <section id="fb" aria-labelledby="h-fb">
+    <div class="head">
+      <span class="eyebrow">Evaluation</span>
+      <h2 id="h-fb">Forward–backward</h2>
+      <p class="muted">Viterbi gives one best path. Forward–backward gives the probability of each form at each innings, using every innings before and after it. The scaling factors c<sub>t</sub> keep the numbers from underflowing, and their logs add up to the log-likelihood.</p>
+    </div>
+    <div class="two">
+      <div class="card" style="display:grid;gap:10px">
+        <h3>P(form | all innings)</h3>
+        <div class="scroll"><svg id="post" role="img" aria-label="Posterior probability of each form per innings"></svg></div>
+        <p class="note" id="post-note"></p>
+      </div>
+      <div class="card" style="display:grid;gap:10px">
+        <h3>Scaling factors</h3>
+        <div class="tbox"><table id="tScale"></table></div>
+        <div class="formula" id="ll"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="next" aria-labelledby="h-next">
+    <div class="head">
+      <span class="eyebrow">Prediction</span>
+      <h2 id="h-next">Next innings</h2>
+      <p class="muted" id="next-sub"></p>
+    </div>
+    <div class="forecast" id="fc"></div>
+    <div class="formula">P(next score) = Σ<sub>j</sub> [ Σ<sub>i</sub> α̂<sub>T</sub>(i) · a<sub>ij</sub> ] · b<sub>j</sub>(score)</div>
+  </section>
+
+  <section id="theory" aria-labelledby="h-th">
+    <div class="head">
+      <span class="eyebrow">Theory</span>
+      <h2 id="h-th">The three HMM problems</h2>
+      <p class="muted">A Markov model assumes the next state depends only on the current one. A Hidden Markov Model adds a twist: you never see the state, only an observation it produces.</p>
+    </div>
+    <div class="problems">
+      <div class="card prob">
+        <span class="tag">Evaluation · Forward</span>
+        <h3>How likely is this scorecard?</h3>
+        <p class="q">Compute P(O | λ) by summing over every possible form path.</p>
+        <div class="formula">α<sub>t</sub>(j) = [ Σ<sub>i</sub> α<sub>t−1</sub>(i) a<sub>ij</sub> ] b<sub>j</sub>(o<sub>t</sub>)</div>
+        <p class="note">Brute force checks N<sup>T</sup> paths. The forward algorithm reuses partial sums and needs only O(N²T).</p>
+      </div>
+      <div class="card prob">
+        <span class="tag">Decoding · Viterbi</span>
+        <h3>What was the form?</h3>
+        <p class="q">Find the single most likely hidden sequence.</p>
+        <div class="formula">δ<sub>t</sub>(j) = max<sub>i</sub> [ δ<sub>t−1</sub>(i) a<sub>ij</sub> ] b<sub>j</sub>(o<sub>t</sub>)</div>
+        <p class="note">Same as forward, with the sum swapped for a max, plus back-pointers to recover the path.</p>
+      </div>
+      <div class="card prob">
+        <span class="tag">Learning · Baum–Welch</span>
+        <h3>What are the parameters?</h3>
+        <p class="q">Choose A, B, π to maximise the likelihood of the data.</p>
+        <div class="formula">a<sub>ij</sub> = Σ<sub>t</sub> ξ<sub>t</sub>(i,j) / Σ<sub>t</sub> γ<sub>t</sub>(i)</div>
+        <p class="note">EM: the E-step finds γ and ξ with forward–backward, the M-step re-estimates the parameters from them.</p>
+      </div>
+    </div>
+    <div class="card scroll">
+      <h3>Syllabus coverage</h3>
+      <table class="cov">
+        <thead><tr><th>Topic</th><th>Name</th><th>Where it appears on this page</th></tr></thead>
+        <tbody>
+          <tr><td>28</td><td>Sequential data, Markov models</td><td>The transition matrix A on its own is a Markov chain over form.</td></tr>
+          <tr><td>29</td><td>HMM</td><td>Hidden form states, observed score buckets, λ = (A, B, π).</td></tr>
+          <tr><td>30</td><td>Maximum likelihood for the HMM</td><td>Baum–Welch learning and the log-likelihood chart.</td></tr>
+          <tr><td>31</td><td>Forward and backward algorithm</td><td>Posterior chart and the next-innings forecast.</td></tr>
+          <tr><td>32</td><td>Sum-product algorithm</td><td>Forward–backward is sum-product on a chain. Viterbi is its max-product version.</td></tr>
+          <tr><td>33</td><td>Scaling factors, Viterbi</td><td>Scaling factor table and the step-by-step trellis.</td></tr>
+          <tr><td>34</td><td>Linear dynamical systems</td><td>The same chain with a continuous hidden state, such as a numeric "form rating". The Kalman filter plays the role of the forward pass.</td></tr>
+          <tr><td>35</td><td>Practice: HMM on sequential data</td><td>The whole project, plus the Python code below.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="viva" aria-labelledby="h-viva">
+    <div class="head">
+      <span class="eyebrow">Be ready</span>
+      <h2 id="h-viva">Viva questions</h2>
+    </div>
+    <div class="viva">
+      <details><summary>What is the Markov property?</summary><p>The next state depends only on the current state, not on the full history. Here, today's form depends only on the form in the previous innings.</p></details>
+      <details><summary>Why is the model called "hidden"?</summary><p>We never observe the state (the batter's form). We only observe what it produces (the runs scored). The model infers the hidden state from the observations.</p></details>
+      <details><summary>What are the parts of an HMM?</summary><p>Hidden states, observations, the start probabilities π, the transition matrix A (state to state), and the emission matrix B (state to observation). Together λ = (A, B, π).</p></details>
+      <details><summary>Why not just call a score of 50+ "in form"?</summary><p>One innings is noisy. A good batter can fail once while still in form. The HMM uses the transition probabilities to look at the pattern over several innings, so one bad score doesn't flip the verdict.</p></details>
+      <details><summary>Forward algorithm vs Viterbi?</summary><p>Both fill the same table. Forward sums over previous states and gives the probability of the whole sequence. Viterbi takes the max and keeps back-pointers, which gives the single best hidden path.</p></details>
+      <details><summary>What is the time complexity?</summary><p>O(N²T) for N states and T innings, compared with O(N<sup>T</sup>) for checking every path by brute force.</p></details>
+      <details><summary>Why do we need scaling factors?</summary><p>Multiplying many probabilities below 1 quickly underflows to 0 on a computer. Scaling normalises α at each step by c<sub>t</sub>, and the log-likelihood becomes the sum of log c<sub>t</sub>. Viterbi uses log probabilities for the same reason.</p></details>
+      <details><summary>How is Baum–Welch related to EM?</summary><p>Baum–Welch is EM for HMMs. The E-step computes γ (state probabilities) and ξ (transition probabilities) with forward–backward. The M-step re-estimates A, B and π from them. Like K-means and GMMs in Unit 3, it can get stuck in a local maximum.</p></details>
+      <details><summary>What is the sum-product algorithm here?</summary><p>An HMM is a chain-shaped graphical model. Running sum-product message passing on that chain gives exactly the forward and backward recursions. Replacing sums with maxes gives Viterbi (max-product).</p></details>
+      <details><summary>What is a linear dynamical system?</summary><p>The continuous version of an HMM. The hidden state is a real-valued vector with Gaussian noise, and inference uses the Kalman filter and smoother instead of forward–backward.</p></details>
+      <details><summary>Limitations of this project?</summary><p>Runs are reduced to three buckets, so detail is lost. Real form also depends on the opponent, pitch and batting position. Learning the parameters from a short sequence overfits, so a longer career record gives a more reliable model.</p></details>
+    </div>
+  </section>
+
+  <section id="code" aria-labelledby="h-code">
+    <div class="head">
+      <span class="eyebrow">Practice 1</span>
+      <h2 id="h-code">Python version</h2>
+      <p class="muted">The same forward and Viterbi algorithms in plain NumPy. Run it in Google Colab.</p>
+    </div>
+    <div class="btn-row"><button class="btn ghost" id="copy">Copy code</button><span class="mono small muted" id="copied" aria-live="polite"></span></div>
+    <pre id="py"></pre>
+  </section>
+</main>
+
+<footer class="wrap">Form Guide · ML mini project on Hidden Markov Models. Every calculation on this page runs live in your browser in plain JavaScript.</footer>
+
+<script>
+const OBS = ["Low", "Medium", "High"], RANGE = ["0–19", "20–49", "50+"];
+const PRESETS = {
+  "Slump": [72, 34, 58, 8, 12, 25, 3, 15],
+  "Comeback": [4, 11, 0, 17, 9, 45, 63, 38, 88, 52],
+  "Purple patch": [23, 41, 67, 102, 55, 78, 12, 61, 49, 90],
+  "Rollercoaster": [5, 81, 14, 3, 66, 72, 9, 0, 57, 31, 8, 44]
+};
+const DEFAULTS = {
+  2: { keys: ["in", "out"], names: ["In form", "Out of form"], pi: [0.5, 0.5], A: [[0.8, 0.2], [0.3, 0.7]], B: [[0.2, 0.4, 0.4], [0.6, 0.3, 0.1]] },
+  3: { keys: ["in", "avg", "out"], names: ["In form", "Average", "Out of form"], pi: [0.34, 0.33, 0.33], A: [[0.75, 0.2, 0.05], [0.2, 0.6, 0.2], [0.05, 0.25, 0.7]], B: [[0.15, 0.35, 0.5], [0.35, 0.45, 0.2], [0.65, 0.3, 0.05]] }
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+const $ = id => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent, style) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (style) Object.assign(e.style, style); if (parent) parent.appendChild(e); return e; }
+function txt(parent, x, y, s, attrs = {}, style) { const t = el("text", { x, y, ...attrs }, parent, style); t.textContent = s; return t; }
+const col = k => `var(--s-${k})`;
+const norm = r => { const s = r.reduce((a, b) => a + b, 0); return s > 0 ? r.map(v => v / s) : r.map(() => 1 / r.length); };
+const fmtP = v => v === 0 ? "0" : v >= 0.001 ? v.toFixed(4) : v.toExponential(2);
+const pct = v => `${Math.round(v * 100)}%`;
+const bucket = r => r < 20 ? 0 : r < 50 ? 1 : 2;
+
+let M = clone(DEFAULTS[2]);
+let runs = PRESETS["Slump"].slice();
+let preset = "Slump";
+let truth = null;
+let llHist = [];
+let learning = false;
+
+// ---------- HMM algorithms ----------
+function forward(m, o) {
+  const N = m.pi.length, al = [], c = [];
+  for (let t = 0; t < o.length; t++) {
+    let a;
+    if (t === 0) a = m.pi.map((p, i) => p * m.B[i][o[0]]);
+    else { a = []; for (let j = 0; j < N; j++) { let s = 0; for (let i = 0; i < N; i++) s += al[t - 1][i] * m.A[i][j]; a.push(s * m.B[j][o[t]]); } }
+    const ct = a.reduce((x, y) => x + y, 0);
+    c.push(ct); al.push(a.map(v => v / ct));
+  }
+  return { al, c, logL: c.reduce((s, v) => s + Math.log(v), 0) };
+}
+function backward(m, o, c) {
+  const N = m.pi.length, T = o.length, be = new Array(T);
+  be[T - 1] = new Array(N).fill(1);
+  for (let t = T - 2; t >= 0; t--) {
+    be[t] = [];
+    for (let i = 0; i < N; i++) { let s = 0; for (let j = 0; j < N; j++) s += m.A[i][j] * m.B[j][o[t + 1]] * be[t + 1][j]; be[t].push(s / c[t + 1]); }
+  }
+  return be;
+}
+const posterior = (al, be) => al.map((a, t) => norm(a.map((v, i) => v * be[t][i])));
+function viterbi(m, o) {
+  const N = m.pi.length, T = o.length, L = Math.log, d = [], bk = [];
+  d.push(m.pi.map((p, i) => L(p) + L(m.B[i][o[0]]))); bk.push(new Array(N).fill(-1));
+  for (let t = 1; t < T; t++) {
+    const row = [], br = [];
+    for (let j = 0; j < N; j++) {
+      let best = -Infinity, bi = 0;
+      for (let i = 0; i < N; i++) { const v = d[t - 1][i] + L(m.A[i][j]); if (v > best) { best = v; bi = i; } }
+      row.push(best + L(m.B[j][o[t]])); br.push(bi);
+    }
+    d.push(row); bk.push(br);
+  }
+  let last = 0; for (let j = 1; j < N; j++) if (d[T - 1][j] > d[T - 1][last]) last = j;
+  const path = [last]; for (let t = T - 1; t > 0; t--) path.unshift(bk[t][path[0]]);
+  return { d, bk, path, logP: d[T - 1][last] };
+}
+function bwStep(m, o) {
+  const N = m.pi.length, T = o.length, f = forward(m, o), be = backward(m, o, f.c), g = posterior(f.al, be);
+  const A = [...Array(N)].map(() => new Array(N).fill(0)), B = [...Array(N)].map(() => new Array(3).fill(0));
+  for (let t = 0; t < T - 1; t++) for (let i = 0; i < N; i++) for (let j = 0; j < N; j++)
+    A[i][j] += f.al[t][i] * m.A[i][j] * m.B[j][o[t + 1]] * be[t + 1][j] / f.c[t + 1];
+  for (let t = 0; t < T; t++) for (let i = 0; i < N; i++) B[i][o[t]] += g[t][i];
+  const sm = 1e-3;
+  return { ...m, pi: norm(g[0].map(v => v + sm)), A: A.map(r => norm(r.map(v => v + sm))), B: B.map(r => norm(r.map(v => v + sm))) };
+}
+// After learning, order states from best form to worst so the names stay meaningful.
+function sortStates(m) {
+  const score = i => m.B[i][1] + 2 * m.B[i][2];
+  const ord = m.pi.map((_, i) => i).sort((a, b) => score(b) - score(a));
+  return { ...m, pi: ord.map(i => m.pi[i]), A: ord.map(i => ord.map(j => m.A[i][j])), B: ord.map(i => m.B[i].slice()) };
+}
+
+// ---------- Rendering ----------
+let R = null;
+function compute() {
+  const o = runs.map(bucket), f = forward(M, o), be = backward(M, o, f.c), g = posterior(f.al, be), v = viterbi(M, o);
+  const N = M.pi.length;
+  const pState = []; for (let j = 0; j < N; j++) { let s = 0; for (let i = 0; i < N; i++) s += f.al[o.length - 1][i] * M.A[i][j]; pState.push(s); }
+  const pObs = [0, 1, 2].map(k => pState.reduce((s, p, j) => s + p * M.B[j][k], 0));
+  R = { o, f, be, g, v, pState, pObs };
+}
+
+function segments(path) {
+  const segs = [];
+  path.forEach((s, t) => { if (segs.length && segs[segs.length - 1].s === s) segs[segs.length - 1].b = t; else segs.push({ s, a: t, b: t }); });
+  return segs;
+}
+
+function renderBoard() {
+  const T = runs.length, last = R.v.path[T - 1];
+  $("b-n").textContent = T;
+  $("b-hs").textContent = `highest ${Math.max(...runs)}`;
+  $("b-avg").textContent = (runs.reduce((a, b) => a + b, 0) / T).toFixed(1);
+  $("b-form").innerHTML = `<span class="lamp" style="color:${col(M.keys[last])}"></span>${M.names[last]}`;
+  $("b-formp").textContent = `P = ${R.g[T - 1][last].toFixed(2)} after innings ${T}`;
+  $("b-fifty").textContent = pct(R.pObs[2]);
+  const ch = segments(R.v.path).length - 1;
+  $("b-chg").textContent = ch;
+  $("b-chgs").textContent = ch === 1 ? "switch in the Viterbi path" : "switches in the Viterbi path";
+}
+
+function renderHero() {
+  const svg = $("hero"); svg.innerHTML = "";
+  const T = runs.length, W = Math.max(960, 80 + T * 44), H = truth ? 286 : 260;
+  const l = 70, r = 14, t = 16, pb = 190;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.style.width = "100%"; svg.style.minWidth = Math.min(W, 1200) * 0.66 + "px";
+  const yMax = Math.max(100, Math.ceil(Math.max(...runs) / 50) * 50);
+  const y = v => pb - v / yMax * (pb - t);
+  const ticks = [0]; for (let v = 50; v <= yMax; v += 50) ticks.push(v);
+  ticks.forEach(v => { el("line", { class: "grid", x1: l, x2: W - r, y1: y(v), y2: y(v) }, svg); txt(svg, l - 8, y(v) + 4, v, { "text-anchor": "end" }); });
+  [[20, "Medium from 20"], [50, "High from 50"]].forEach(([v, s]) => {
+    el("line", { x1: l, x2: W - r, y1: y(v), y2: y(v), "stroke-dasharray": "3 4", "stroke-width": 1 }, svg, { stroke: "var(--muted)" });
+    txt(svg, W - r, y(v) - 5, s, { "text-anchor": "end" });
+  });
+  txt(svg, 14, (t + pb) / 2, "Runs", { class: "t-title", "text-anchor": "middle", transform: `rotate(-90 14 ${(t + pb) / 2})` });
+  const band = (W - l - r) / T, bw = Math.min(band * 0.62, 34);
+  runs.forEach((v, i) => {
+    const cx = l + band * (i + 0.5), k = M.keys[R.v.path[i]];
+    el("rect", { x: cx - bw / 2, y: y(v), width: bw, height: Math.max(pb - y(v), 1.5), rx: 3 }, svg, { fill: col(k) });
+    txt(svg, cx, y(v) - 5, v, { "text-anchor": "middle", class: "t-ink" });
+    txt(svg, cx, pb + 15, i + 1, { "text-anchor": "middle" });
+    el("rect", { x: l + band * i + 0.5, y: pb + 26, width: band - 1, height: 16 }, svg, { fill: col(k) });
+    if (truth) el("rect", { x: l + band * i + 0.5, y: pb + 52, width: band - 1, height: 16, opacity: 0.85 }, svg, { fill: col(M.keys[truth[i]]) });
+  });
+  txt(svg, l - 8, pb + 15, "Inn.", { "text-anchor": "end" });
+  txt(svg, l - 8, pb + 38, "Viterbi", { "text-anchor": "end", class: "t-ink" });
+  if (truth) txt(svg, l - 8, pb + 64, "True form", { "text-anchor": "end", class: "t-ink" });
+
+  $("legend").innerHTML = M.names.map((n, i) => `<span><i class="dot" style="background:${col(M.keys[i])}"></i>${n}</span>`).join("");
+  const segs = segments(R.v.path).map(s => `<b style="color:${col(M.keys[s.s])}">${M.names[s.s].toLowerCase()}</b> for ${s.a === s.b ? `innings ${s.a + 1}` : `innings ${s.a + 1}–${s.b + 1}`}`);
+  let msg = "The model says: " + segs.join(", then ") + ".";
+  if (truth) {
+    const hit = truth.filter((s, i) => s === R.v.path[i]).length;
+    msg += ` Viterbi matched the true simulated form in <b>${hit} of ${T}</b> innings (${pct(hit / T)}).`;
+  }
+  $("verdict").innerHTML = msg;
+}
+
+function renderDiagram() {
+  const svg = $("diagram"); svg.innerHTML = "";
+  const N = M.pi.length, rad = 46;
+  const P = N === 2 ? [[150, 165], [410, 165]] : [[135, 250], [280, 110], [425, 250]];
+  const cx = P.reduce((s, p) => s + p[0], 0) / N, cy = P.reduce((s, p) => s + p[1], 0) / N;
+  const defs = el("defs", {}, svg);
+  const mk = el("marker", { id: "arr", viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 9, markerHeight: 9, orient: "auto-start-reverse", markerUnits: "userSpaceOnUse" }, defs);
+  el("path", { d: "M0,0 L10,5 L0,10 z" }, mk, { fill: "var(--ink)" });
+  const unit = (x, y) => { const d = Math.hypot(x, y) || 1; return [x / d, y / d]; };
+  const rot = ([x, y], a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const p = M.A[i][j], w = 1.2 + p * 9, [xi, yi] = P[i];
+    if (i === j) {
+      const dir = unit(xi - cx, yi - cy);
+      const s1 = rot(dir, -0.42), s2 = rot(dir, 0.42), c1 = rot(dir, -0.75), c2 = rot(dir, 0.75);
+      const d = `M${xi + rad * s1[0]},${yi + rad * s1[1]} C${xi + (rad + 78) * c1[0]},${yi + (rad + 78) * c1[1]} ${xi + (rad + 78) * c2[0]},${yi + (rad + 78) * c2[1]} ${xi + (rad + 4) * s2[0]},${yi + (rad + 4) * s2[1]}`;
+      el("path", { d, fill: "none", "stroke-width": w, "marker-end": "url(#arr)", "stroke-linecap": "round", opacity: 0.85 }, svg, { stroke: "var(--ink)" });
+      txt(svg, xi + (rad + 70) * dir[0], yi + (rad + 70) * dir[1] + 4, p.toFixed(2), { "text-anchor": "middle", class: "t-ink" }, { fontSize: "13px" });
+    } else {
+      const [xj, yj] = P[j], dx = xj - xi, dy = yj - yi, [ux, uy] = unit(dx, dy), perp = [-uy, ux];
+      const mx = (xi + xj) / 2 + perp[0] * 32, my = (yi + yj) / 2 + perp[1] * 32;
+      const a = unit(mx - xi, my - yi), b = unit(mx - xj, my - yj);
+      const sx = xi + rad * a[0], sy = yi + rad * a[1], ex = xj + (rad + 3) * b[0], ey = yj + (rad + 3) * b[1];
+      el("path", { d: `M${sx},${sy} Q${mx},${my} ${ex},${ey}`, fill: "none", "stroke-width": w, "marker-end": "url(#arr)", "stroke-linecap": "round", opacity: 0.85 }, svg, { stroke: "var(--ink)" });
+      const lx = 0.25 * sx + 0.5 * mx + 0.25 * ex + perp[0] * 14, ly = 0.25 * sy + 0.5 * my + 0.25 * ey + perp[1] * 14;
+      txt(svg, lx, ly + 4, p.toFixed(2), { "text-anchor": "middle", class: "t-ink" }, { fontSize: "13px" });
+    }
+  }
+  P.forEach(([x, y], i) => {
+    el("circle", { cx: x, cy: y, r: rad, "stroke-width": 3 }, svg, { fill: "var(--surface)", stroke: col(M.keys[i]) });
+    const words = M.names[i].split(" ");
+    const lines = words.length > 2 ? [words.slice(0, 2).join(" "), words.slice(2).join(" ")] : words.length === 2 ? words : [words[0]];
+    lines.forEach((s, k) => txt(svg, x, y - (lines.length - 1) * 8 + k * 16 - 2, s, { "text-anchor": "middle" }, { fill: col(M.keys[i]), fontFamily: "var(--body)", fontWeight: 600, fontSize: "14px" }));
+    txt(svg, x, y + (lines.length > 1 ? 26 : 20), `π ${M.pi[i].toFixed(2)}`, { "text-anchor": "middle" });
+  });
+}
+
+function renderEmis() {
+  const svg = $("emis"); svg.innerHTML = "";
+  const N = M.pi.length, l = 40, r = 10, t = 12, b = 150, W = 520;
+  const y = v => b - v * (b - t);
+  [0, 0.25, 0.5, 0.75, 1].forEach(v => { el("line", { class: "grid", x1: l, x2: W - r, y1: y(v), y2: y(v) }, svg); txt(svg, l - 6, y(v) + 4, v.toFixed(2), { "text-anchor": "end" }); });
+  const gw = (W - l - r) / 3, bw = Math.min(30, (gw - 24) / N);
+  OBS.forEach((o, k) => {
+    const gx = l + gw * k + gw / 2;
+    for (let i = 0; i < N; i++) {
+      const x = gx - (N * bw) / 2 + i * bw, v = M.B[i][k];
+      el("rect", { x: x + 2, y: y(v), width: bw - 4, height: b - y(v), rx: 2 }, svg, { fill: col(M.keys[i]) });
+      txt(svg, x + bw / 2, y(v) - 4, v.toFixed(2), { "text-anchor": "middle" }, { fontSize: "10px" });
+    }
+    txt(svg, gx, b + 18, `${o} (${RANGE[k]})`, { "text-anchor": "middle", class: "t-title" });
+  });
+}
+
+function renderParams() {
+  const N = M.pi.length;
+  const name = i => `<span class="sname"><i class="dot" style="background:${col(M.keys[i])}"></i>${M.names[i]}</span>`;
+  const inp = (id, v, lab) => `<input class="pin" type="number" min="0" max="1" step="0.05" id="${id}" value="${v.toFixed(2)}" aria-label="${lab}">`;
+  $("tA").innerHTML = `<thead><tr><th>From</th><th class="num">π</th>${M.names.map(n => `<th class="num">→ ${n}</th>`).join("")}</tr></thead><tbody>` +
+    M.names.map((n, i) => `<tr><td>${name(i)}</td><td class="num">${inp(`pi-${i}`, M.pi[i], `Start probability ${n}`)}</td>${M.A[i].map((v, j) => `<td class="num">${inp(`A-${i}-${j}`, v, `${n} to ${M.names[j]}`)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+  $("tB").innerHTML = `<thead><tr><th>State</th>${OBS.map((o, k) => `<th class="num">${o} ${RANGE[k]}</th>`).join("")}</tr></thead><tbody>` +
+    M.names.map((n, i) => `<tr><td>${name(i)}</td>${M.B[i].map((v, k) => `<td class="num">${inp(`B-${i}-${k}`, v, `${n} gives ${OBS[k]}`)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+  document.querySelectorAll(".pin").forEach(x => x.addEventListener("change", onParam));
+}
+function onParam(e) {
+  if (learning) return;
+  const [kind, a] = e.target.id.split("-"), i = +a, N = M.pi.length;
+  const read = id => Math.max(0.001, parseFloat($(id).value) || 0);
+  if (kind === "pi") { M.pi = norm(M.pi.map((_, k) => read(`pi-${k}`))); M.pi.forEach((v, k) => $(`pi-${k}`).value = v.toFixed(2)); }
+  if (kind === "A") { M.A[i] = norm(M.A[i].map((_, j) => read(`A-${i}-${j}`))); M.A[i].forEach((v, j) => $(`A-${i}-${j}`).value = v.toFixed(2)); }
+  if (kind === "B") { M.B[i] = norm(M.B[i].map((_, k) => read(`B-${i}-${k}`))); M.B[i].forEach((v, k) => $(`B-${i}-${k}`).value = v.toFixed(2)); }
+  $("lstatus").textContent = "Using your edited parameters.";
+  llHist = []; drawLL();
+  update(false);
+}
+
+// ---------- Viterbi trellis ----------
+let vStep = Infinity, vTimer = null;
+function renderTrellis() {
+  const svg = $("trellis"); svg.innerHTML = "";
+  const T = runs.length, N = M.pi.length, cw = 112, ch = 66, l = 104, top = 62;
+  const W = l + T * cw + 8, H = top + N * ch + 6;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.setAttribute("height", H);
+  const step = Math.min(vStep, T), done = vStep > T;
+  const cxy = (t, j) => [l + t * cw + cw / 2, top + j * ch + ch / 2];
+  for (let t = 0; t < T; t++) {
+    const x = l + t * cw + cw / 2, on = t < step;
+    txt(svg, x, 16, `Innings ${t + 1}`, { "text-anchor": "middle" }, { opacity: on ? 1 : 0.35 });
+    txt(svg, x, 36, runs[t], { "text-anchor": "middle" }, { fill: "var(--ink)", fontFamily: "var(--display)", fontWeight: 800, fontSize: "20px", opacity: on ? 1 : 0.35 });
+    txt(svg, x, 52, OBS[R.o[t]], { "text-anchor": "middle" }, { opacity: on ? 1 : 0.35 });
+  }
+  M.names.forEach((n, j) => txt(svg, l - 10, cxy(0, j)[1] + 5, n, { "text-anchor": "end" }, { fill: col(M.keys[j]), fontFamily: "var(--body)", fontWeight: 600, fontSize: "13px" }));
+  const onPath = (t, j) => done && R.v.path[t] === j;
+  for (let t = 1; t < step; t++) for (let j = 0; j < N; j++) {
+    const i = R.v.bk[t][j], [x1, y1] = cxy(t - 1, i), [x2, y2] = cxy(t, j), hot = onPath(t, j) && R.v.path[t - 1] === i;
+    el("line", { x1: x1 + 40, y1, x2: x2 - 40, y2, "stroke-width": hot ? 4 : 1.4, "marker-end": hot ? "" : "" }, svg, { stroke: hot ? col(M.keys[j]) : "var(--muted)", opacity: hot ? 1 : 0.55 });
+  }
+  for (let t = 0; t < T; t++) for (let j = 0; j < N; j++) {
+    const [x, y] = cxy(t, j), on = t < step, hot = onPath(t, j), cur = !done && t === step - 1;
+    const g = el("g", {}, svg, { opacity: on ? 1 : 0.18 });
+    el("rect", { x: x - 40, y: y - 19, width: 80, height: 38, rx: 7, "stroke-width": hot ? 3 : cur ? 2 : 1 }, g, { fill: "var(--surface)", stroke: hot ? col(M.keys[j]) : cur ? "var(--accent)" : "var(--line)" });
+    if (hot) el("rect", { x: x - 40, y: y - 19, width: 80, height: 38, rx: 7, opacity: 0.14 }, g, { fill: col(M.keys[j]) });
+    txt(g, x, y + 4, on ? fmtP(Math.exp(R.v.d[t][j])) : "δ", { "text-anchor": "middle" }, { fill: "var(--ink)", fontSize: "12px" });
+  }
+  $("v-pos").textContent = done ? `Finished · backtracked through ${T} innings` : `Filled ${step} of ${T} innings`;
+  $("v-exp").textContent = explain(step, done);
+}
+function explain(step, done) {
+  const T = runs.length, N = M.pi.length, E = Math.exp;
+  if (done) {
+    const last = R.v.path[T - 1];
+    return `Backtrack: the best final cell is ${M.names[last]} (δ = ${fmtP(E(R.v.logP))}).\nFollow the arrows back to innings 1 to read off the most likely form:\n` +
+      R.v.path.map((s, t) => `${t + 1}:${M.names[s]}`).join("  →  ");
+  }
+  const t = step - 1, o = R.o[t];
+  let s = `Innings ${t + 1}: ${runs[t]} runs, observation = ${OBS[o]}\n`;
+  if (t === 0) {
+    s += "Start: δ₁(j) = π(j) × b(j, " + OBS[o] + ")\n";
+    for (let j = 0; j < N; j++) s += `  ${M.names[j]}: ${M.pi[j].toFixed(2)} × ${M.B[j][o].toFixed(2)} = ${fmtP(E(R.v.d[0][j]))}\n`;
+  } else {
+    s += "δ(j) = max over previous i of [δ(i) × a(i→j)] × b(j, " + OBS[o] + ")\n";
+    for (let j = 0; j < N; j++) {
+      const i = R.v.bk[t][j];
+      s += `  ${M.names[j]}: best from ${M.names[i]}: ${fmtP(E(R.v.d[t - 1][i]))} × ${M.A[i][j].toFixed(2)} × ${M.B[j][o].toFixed(2)} = ${fmtP(E(R.v.d[t][j]))}\n`;
+    }
+  }
+  return s.trimEnd();
+}
+function stopPlay() { if (vTimer) { clearInterval(vTimer); vTimer = null; } $("v-play").textContent = "Play"; }
+$("v-reset").onclick = () => { stopPlay(); vStep = 1; renderTrellis(); };
+$("v-step").onclick = () => { stopPlay(); vStep = Math.min((vStep > runs.length ? 0 : vStep) + 1, runs.length + 1); renderTrellis(); };
+$("v-all").onclick = () => { stopPlay(); vStep = Infinity; renderTrellis(); };
+$("v-play").onclick = () => {
+  if (vTimer) { stopPlay(); return; }
+  if (vStep > runs.length) vStep = 0;
+  $("v-play").textContent = "Pause";
+  vTimer = setInterval(() => { vStep++; renderTrellis(); if (vStep > runs.length) stopPlay(); }, matchMedia("(prefers-reduced-motion: reduce)").matches ? 400 : 850);
+};
+
+// ---------- Posterior, scaling, forecast ----------
+function renderPost() {
+  const svg = $("post"); svg.innerHTML = "";
+  const T = runs.length, N = M.pi.length, W = Math.max(620, 60 + T * 36), H = 210, l = 40, r = 8, t = 12, b = 168;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.style.width = "100%"; svg.style.minWidth = Math.min(W, 900) * 0.7 + "px";
+  const y = v => b - v * (b - t);
+  [0, 0.5, 1].forEach(v => { el("line", { class: "grid", x1: l, x2: W - r, y1: y(v), y2: y(v) }, svg); txt(svg, l - 6, y(v) + 4, v.toFixed(1), { "text-anchor": "end" }); });
+  const band = (W - l - r) / T, bw = Math.min(band * 0.72, 30);
+  R.g.forEach((g, i) => {
+    const cx = l + band * (i + 0.5); let acc = 0;
+    for (let j = N - 1; j >= 0; j--) {
+      el("rect", { x: cx - bw / 2, y: y(acc + g[j]), width: bw, height: Math.max(0, y(acc) - y(acc + g[j])) }, svg, { fill: col(M.keys[j]) });
+      acc += g[j];
+    }
+    txt(svg, cx, b + 15, i + 1, { "text-anchor": "middle" });
+    el("circle", { cx, cy: b + 30, r: 4.5 }, svg, { fill: col(M.keys[R.v.path[i]]) });
+  });
+  txt(svg, l - 6, b + 34, "Viterbi", { "text-anchor": "end" });
+  const dis = R.g.map((g, i) => g.indexOf(Math.max(...g)) !== R.v.path[i] ? i + 1 : null).filter(Boolean);
+  $("post-note").textContent = `Each bar shows how sure the model is about the form at that innings. The dots underneath are Viterbi's choice. ` +
+    (dis.length ? `At innings ${dis.join(", ")} the most likely single state differs from the best overall path, which can happen because Viterbi optimises the whole sequence at once.` : `Here the most likely state at every innings agrees with the Viterbi path.`);
+
+  $("tScale").innerHTML = `<thead><tr><th class="num">t</th><th class="num">Runs</th><th>Obs</th><th class="num">c<sub>t</sub></th><th class="num">log c<sub>t</sub></th></tr></thead><tbody>` +
+    R.f.c.map((c, i) => `<tr><td class="num">${i + 1}</td><td class="num">${runs[i]}</td><td>${OBS[R.o[i]]}</td><td class="num">${c.toFixed(4)}</td><td class="num">${Math.log(c).toFixed(4)}</td></tr>`).join("") + "</tbody>";
+  $("ll").innerHTML = `log P(O | λ) = Σ log c<sub>t</sub> = <b>${R.f.logL.toFixed(4)}</b> &nbsp;·&nbsp; P(O | λ) = ${fmtP(Math.exp(R.f.logL))}`;
+}
+function renderNext() {
+  const T = runs.length, best = R.pObs.indexOf(Math.max(...R.pObs));
+  $("fc").innerHTML = OBS.map((o, k) => `<div class="fc"><span class="label">${o} score · ${RANGE[k]}</span><span class="big" style="${k === best ? "color:var(--accent)" : ""}">${pct(R.pObs[k])}</span><span class="meter"><i style="width:${(R.pObs[k] * 100).toFixed(1)}%"></i></span></div>`).join("");
+  const ps = R.pState.map((p, j) => `${M.names[j].toLowerCase()} ${pct(p)}`).join(", ");
+  $("next-sub").textContent = `For innings ${T + 1}, the model first moves the current form one step through A (${ps}), then mixes the emission probabilities. The most likely result is a ${OBS[best].toLowerCase()} score.`;
+}
+
+// ---------- Log-likelihood chart ----------
+function drawLL() {
+  const svg = $("llc"); svg.innerHTML = "";
+  const W = 360, H = 150, l = 50, r = 10, t = 10, b = 120;
+  if (llHist.length < 2) { txt(svg, W / 2, 70, "Run Baum–Welch to see the log-likelihood rise", { "text-anchor": "middle" }); return; }
+  const lo = Math.min(...llHist), hi = Math.max(...llHist), pad = (hi - lo) * 0.1 || 1;
+  const y = v => b - (v - (lo - pad)) / ((hi + pad) - (lo - pad)) * (b - t), x = i => l + i / (llHist.length - 1) * (W - l - r);
+  [lo, hi].forEach(v => { el("line", { class: "grid", x1: l, x2: W - r, y1: y(v), y2: y(v) }, svg); txt(svg, l - 6, y(v) + 4, v.toFixed(2), { "text-anchor": "end" }); });
+  el("polyline", { points: llHist.map((v, i) => `${x(i)},${y(v)}`).join(" "), fill: "none", "stroke-width": 2.5 }, svg, { stroke: "var(--accent)" });
+  el("circle", { cx: x(llHist.length - 1), cy: y(llHist[llHist.length - 1]), r: 4.5 }, svg, { fill: "var(--accent)" });
+  txt(svg, (l + W - r) / 2, H - 6, `Iteration (0–${llHist.length - 1})`, { "text-anchor": "middle", class: "t-title" });
+}
+
+async function learn() {
+  if (learning || runs.length < 3) return;
+  learning = true; stopPlay();
+  ["learn", "reset", "sim", "st2", "st3"].forEach(id => $(id).disabled = true);
+  llHist = [forward(M, R.o).logL];
+  const o = R.o, wait = matchMedia("(prefers-reduced-motion: reduce)").matches ? 10 : 90;
+  let it = 0;
+  for (; it < 60; it++) {
+    M = bwStep(M, o);
+    const ll = forward(M, o).logL; llHist.push(ll);
+    update(true); drawLL();
+    $("lstatus").textContent = `Iteration ${it + 1} · log-likelihood ${ll.toFixed(4)}`;
+    await new Promise(r => setTimeout(r, wait));
+    if (Math.abs(llHist[llHist.length - 1] - llHist[llHist.length - 2]) < 1e-5) break;
+  }
+  M = sortStates(M);
+  learning = false;
+  ["learn", "reset", "sim", "st2", "st3"].forEach(id => $(id).disabled = false);
+  update(true); drawLL();
+  const gain = llHist[llHist.length - 1] - llHist[0];
+  $("lstatus").textContent = `Converged after ${Math.min(it + 1, 60)} iterations. Log-likelihood rose by ${gain.toFixed(3)} to ${llHist[llHist.length - 1].toFixed(4)}.` + (runs.length < 15 ? ` With only ${runs.length} innings the learned model overfits, so treat it as a demo.` : "");
+}
+
+// ---------- Inputs ----------
+function setRunsText() { $("runs").value = runs.join(", "); }
+function renderPresets() {
+  $("presets").innerHTML = Object.keys(PRESETS).map(n => `<button class="chip" aria-pressed="${n === preset}" data-p="${n}">${n}</button>`).join("");
+  document.querySelectorAll("#presets .chip").forEach(b => b.onclick = () => { preset = b.dataset.p; runs = PRESETS[preset].slice(); truth = null; setRunsText(); $("err").textContent = ""; renderPresets(); update(false); });
+}
+let tm = null;
+$("runs").addEventListener("input", () => {
+  clearTimeout(tm);
+  tm = setTimeout(() => {
+    const toks = $("runs").value.split(/[\s,;]+/).filter(Boolean), out = [];
+    for (const tk of toks) {
+      const n = Number(tk.replace(/\*$/, ""));
+      if (!Number.isInteger(n) || n < 0 || n > 400) { $("err").textContent = `"${tk}" isn't a score. Use whole numbers from 0 to 400, separated by commas.`; return; }
+      out.push(n);
+    }
+    if (out.length < 2) { $("err").textContent = "Enter at least 2 innings."; return; }
+    if (out.length > 40) { $("err").textContent = "Use 40 innings or fewer."; return; }
+    $("err").textContent = ""; runs = out; truth = null; preset = null; renderPresets(); update(false);
+  }, 250);
+});
+function setStates(n) {
+  if (learning) return;
+  M = clone(DEFAULTS[n]); truth = null; llHist = []; drawLL();
+  $("st2").setAttribute("aria-pressed", n === 2); $("st3").setAttribute("aria-pressed", n === 3);
+  $("lstatus").textContent = "Using the hand-set default parameters.";
+  update(true);
+}
+$("st2").onclick = () => setStates(2);
+$("st3").onclick = () => setStates(3);
+$("reset").onclick = () => setStates(M.pi.length);
+$("learn").onclick = learn;
+$("sim").onclick = () => {
+  const pick = p => { let r = Math.random(); for (let i = 0; i < p.length; i++) { r -= p[i]; if (r <= 0) return i; } return p.length - 1; };
+  const st = [], rs = [];
+  let s = pick(M.pi);
+  for (let t = 0; t < 20; t++) {
+    if (t > 0) s = pick(M.A[s]);
+    const k = pick(M.B[s]);
+    st.push(s);
+    rs.push(k === 0 ? Math.floor(Math.random() * 20) : k === 1 ? 20 + Math.floor(Math.random() * 30) : Math.min(180, 50 + Math.floor(-Math.log(1 - Math.random()) * 28)));
+  }
+  runs = rs; truth = st; preset = null; setRunsText(); $("err").textContent = ""; renderPresets(); update(false);
+};
+
+function update(paramsChanged) {
+  compute();
+  if (!learning) { stopPlay(); vStep = Infinity; }
+  renderBoard(); renderHero(); renderDiagram(); renderEmis(); renderTrellis(); renderPost(); renderNext();
+  if (paramsChanged) renderParams();
+}
+
+// ---------- Python code ----------
+const PY = `import numpy as np
+
+states = ["In-form", "Out-of-form"]
+obs_names = ["Low (0-19)", "Medium (20-49)", "High (50+)"]
+start = np.array([0.5, 0.5])
+trans = np.array([[0.8, 0.2],        # In-form  -> In, Out
+                  [0.3, 0.7]])       # Out-form -> In, Out
+emit  = np.array([[0.2, 0.4, 0.4],   # In-form:  Low, Medium, High
+                  [0.6, 0.3, 0.1]])  # Out-form: Low, Medium, High
+
+runs = [72, 34, 58, 8, 12, 25, 3, 15]
+obs = [0 if r < 20 else 1 if r < 50 else 2 for r in runs]
+
+# Forward algorithm with scaling: log P(observations)
+def forward(obs):
+    alpha = start * emit[:, obs[0]]
+    log_p = np.log(alpha.sum()); alpha /= alpha.sum()
+    for o in obs[1:]:
+        alpha = (alpha @ trans) * emit[:, o]
+        c = alpha.sum(); log_p += np.log(c); alpha /= c
+    return log_p
+
+# Viterbi algorithm: most likely hidden form sequence
+def viterbi(obs):
+    T, N = len(obs), len(states)
+    V = np.zeros((T, N)); back = np.zeros((T, N), dtype=int)
+    V[0] = start * emit[:, obs[0]]
+    for t in range(1, T):
+        for j in range(N):
+            p = V[t-1] * trans[:, j]
+            back[t, j] = p.argmax()
+            V[t, j] = p.max() * emit[j, obs[t]]
+    path = [V[-1].argmax()]
+    for t in range(T-1, 0, -1):
+        path.insert(0, back[t, path[0]])
+    return [states[s] for s in path]
+
+print("Runs:", runs)
+print("log P(observations) =", round(forward(obs), 4))
+for r, f in zip(runs, viterbi(obs)):
+    print(f"{r:>4} runs -> {f}")`;
+$("py").textContent = PY;
+$("copy").onclick = () => {
+  navigator.clipboard.writeText(PY).then(() => $("copied").textContent = "Copied").catch(() => {
+    const rg = document.createRange(); rg.selectNodeContents($("py")); const s = getSelection(); s.removeAllRanges(); s.addRange(rg);
+    $("copied").textContent = "Selected. Press Ctrl+C to copy.";
+  });
+};
+
+setRunsText(); renderPresets(); drawLL(); update(true);
+</script>
+
+</body>
+</html>
